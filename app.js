@@ -3,6 +3,8 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const userRoutes = require("./routes/user-routes");
+const categoryRoutes = require("./routes/category-routes");
+const productRoutes = require("./routes/product-routes");
 
 const app = express();
 
@@ -22,4 +24,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/api", userRoutes);
+app.use("/api", categoryRoutes);
+app.use("/api", productRoutes);
+
 module.exports = app;
