@@ -26,6 +26,16 @@ api.get(
     userController.getUsers
 );
 
+// Metodos para el usuario cliente
 api.post("/registerUserClient", userController.registerUserClient);
+api.put(
+    "/addToShoppingCart/:idU", [mdAuth.ensureAuth, mdAuth.ensureAuthClient],
+    userController.addToShoppingCart
+);
+
+// api.post(
+//     "/clearShoppingCart/:idU", [mdAuth.ensureAuth, mdAuth.ensureAuthClient],
+//     userController.clearShoppingCart
+// );
 
 module.exports = api;

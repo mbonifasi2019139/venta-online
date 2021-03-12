@@ -1,8 +1,11 @@
 "use strict";
 
 const User = require("./../models/user-model");
+const ShoppingCart = require("./../models/shopping-cart-model");
+const Product = require("./../models/product-model");
 const bcrypt = require("bcrypt-nodejs");
 const jwt = require("../services/jwt");
+const { param } = require("../routes/user-routes");
 
 function createUserAdmin(req, res) {
     let user = new User();
@@ -66,7 +69,10 @@ function login(req, res) {
                                 .status(500)
                                 .send({ message: `Error general verificando la password` });
                         } else if (passwordCheck) {
-                            return res.send({ toke: jwt.createToken(userFound) });
+                            return res.send({
+                                token: jwt.createToken(userFound),
+                                "Compras realizadas": userFound.invoices,
+                            });
                         } else {
                             return res.status(403).send({ message: `Password no coincide` });
                         }
@@ -75,7 +81,7 @@ function login(req, res) {
             } else {
                 return res.status(404).send({ message: "Usuario no" });
             }
-        });
+        }).populate("invoices");
     } else {
         return res.status(400).send({ message: "Ingrese los todos los datos" });
     }
@@ -304,6 +310,141 @@ function registerUserClient(req, res) {
     }
 }
 
+function addToShoppingCart(req, res) {
+    let shoppingCart = new ShoppingCart();
+
+    let userId = req.user.sub;
+    let params = req.body;
+
+    User.findById(userId, (err, userFound) => {
+        if (err) {
+            return res.status(500).send({ message: "Error general" });
+        } else if (userFound) {
+            let products = userFound.shoppingCart;
+            var productExists;
+            var index;
+            var amount = 0;
+
+            for (let i = 0; i < products.length; i++) {
+                if (products[i].productId == params.productId) {
+                    index = i;
+                    productExists = products[index];
+                    console.log(products[index]);
+                    break;
+                }
+            }
+
+            if (productExists) {
+                Product.findById(productExists.productId, (err, productFound) => {
+                    if (err) {
+                        return res.status(500).send({ message: "Error general" });
+                    } else if (productFound) {
+                        let stock = productFound.stock;
+                        let newQuantity =
+                            parseInt(productExists.quantity) + parseInt(params.quantity);
+                        amount = newQuantity * parseInt(productFound.price);
+
+                        if (newQuantity > stock) {
+                            return res
+                                .status(400)
+                                .send({ message: "No hay suficiente stock", stock });
+                        } else {
+                            User.findOneAndUpdate({ _id: userId, "shoppingCart._id": productExists._id }, {
+                                    "shoppingCart.$.quantity": newQuantity,
+                                    "shoppingCart.$.amount": amount,
+                                }, { new: true },
+                                (err, userUpdated) => {
+                                    if (err) {
+                                        return res.status(500).send({ message: "Error general" });
+                                    } else if (userUpdated) {
+                                        return res.send({ message: "User", userUpdated });
+                                    } else {
+                                        return res
+                                            .status(404)
+                                            .send({ message: "No se pudo actualizar el carrito" });
+                                    }
+                                }
+                            );
+                        }
+                    } else {
+                        return res
+                            .status(404)
+                            .send({ message: "No se encontro el producto" });
+                    }
+                });
+            } else {
+                if (params.productId && params.quantity) {
+                    Product.findById(params.productId, (err, productFound) => {
+                        if (err) {
+                            return res.status(500).send({ message: "Error general" });
+                        } else if (productFound) {
+                            var stock = parseInt(productFound.stock);
+
+                            if (stock >= params.quantity && !(stock <= 0)) {
+                                //Calculamos el monto total por el producto
+                                let price = parseInt(productFound.price);
+                                amount = parseInt(params.quantity) * price;
+
+                                shoppingCart.productId = params.productId;
+                                shoppingCart.quantity = params.quantity;
+                                shoppingCart.amount = amount;
+
+                                User.findByIdAndUpdate(
+                                    userId, { $push: { shoppingCart: shoppingCart } }, { new: true },
+                                    (err, userUpdate) => {
+                                        if (err) {
+                                            return res
+                                                .status(500)
+                                                .send({ message: "Error general", err });
+                                        } else if (userUpdate) {
+                                            return res.send({
+                                                message: "Producto agregado al carrito",
+                                                userUpdates: userUpdate,
+                                            });
+                                        } else {
+                                            return res
+                                                .status(403)
+                                                .send({ message: "No se pudo agregar al carrito" });
+                                        }
+                                    }
+                                );
+                            } else {
+                                return res
+                                    .status(403)
+                                    .send({ message: "No existen suficientes productos" });
+                            }
+                        } else {
+                            return res.status(404).send({
+                                message: "No se encontro el poducto que desea agregar al carrito",
+                            });
+                        }
+                    });
+                } else {
+                    return res.status(403).send({ message: "Ingrese todos los datos" });
+                }
+            }
+        } else {}
+    }).populate();
+}
+
+function clearShoppingCart(req, res) {
+    let userId = req.params.idU;
+
+    User.findByIdAndUpdate(
+        userId, {
+            shoppingCart: {},
+        }, { new: true },
+        (err, userUpdated) => {
+            if (err) {
+                return res.status(500).send({ message: "Error general" });
+            } else if (userUpdated) {
+                return res.send({ message: "carrito vaciado", userUpdated });
+            } else {
+                return res.status(404).send({ message: "No existe el usuarios" });
+            }
+        }
+    );
+}
 module.exports = {
     createUserAdmin,
     login,
@@ -312,4 +453,6 @@ module.exports = {
     deleteUser,
     getUsers,
     registerUserClient,
+    addToShoppingCart,
+    // clearShoppingCart,
 };

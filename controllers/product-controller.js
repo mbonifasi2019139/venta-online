@@ -123,6 +123,7 @@ function updateProduct(req, res) {
                                 } else if (productUpdated) {
                                     return res.send({
                                         message: "Producto actualizado correctamente",
+                                        productUpdated,
                                     });
                                 } else {
                                     return res

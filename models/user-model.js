@@ -10,9 +10,9 @@ const userSchema = Schema({
     shoppingCart: [{
         productId: { type: Schema.ObjectId, ref: "product" },
         quantity: { type: Number, default: 0 },
-        amount: Number,
+        amount: Number, // esta propiedad se va a calcular cuando se haga la peticion para agregar al carrito
     }, ],
-    invoices: { type: Schema.ObjectId, ref: "invoice" },
+    invoices: [{ type: Schema.ObjectId, ref: "invoice" }],
 });
 
 module.exports = mongoose.model("user", userSchema);

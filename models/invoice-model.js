@@ -4,9 +4,10 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const invoiceSchema = Schema({
-    shopingCart: { type: Schema.ObjectId, ref: "shoppingcart" },
+    shoppingCart: [],
     date: { type: Date, default: Date.now },
     userId: { type: Schema.ObjectId, ref: "user" },
+    total: Number,
 });
 
-module.exports = mongoose.model("invoice", invoiceSchame);
+module.exports = mongoose.model("invoice", invoiceSchema);
