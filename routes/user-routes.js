@@ -33,9 +33,39 @@ api.put(
     userController.addToShoppingCart
 );
 
-// api.post(
-//     "/clearShoppingCart/:idU", [mdAuth.ensureAuth, mdAuth.ensureAuthClient],
-//     userController.clearShoppingCart
-// );
+api.put(
+    "/getMostSelledProducts", [mdAuth.ensureAuth, mdAuth.ensureAuthClient],
+    userController.getMostSelledProducts
+);
+
+api.post(
+    "/searchProductsByName", [mdAuth.ensureAuth, mdAuth.ensureAuthClient],
+    userController.searchProductsByName
+);
+
+api.post(
+    "/showDetailInvoice/:idI", [mdAuth.ensureAuth, mdAuth.ensureAuthClient],
+    userController.showDetailInvoice
+);
+
+api.post(
+    "/searchByCategory/:idC", [mdAuth.ensureAuth, mdAuth.ensureAuthClient],
+    userController.searchByCategory
+);
+
+api.get(
+    "/showCategories", [mdAuth.ensureAuth, mdAuth.ensureAuthClient],
+    userController.showCategories
+);
+
+api.post(
+    "/updateUserClient/:idU", [mdAuth.ensureAuth, mdAuth.ensureAuthClient],
+    userController.updateUserClient
+);
+
+api.delete(
+    "/deleteAccount/:idU", [mdAuth.ensureAuth, mdAuth.ensureAuthClient],
+    userController.deleteAccount
+);
 
 module.exports = api;

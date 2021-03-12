@@ -3,3 +3,9 @@
 Ejecute el comando
 `npm install`
 para probar mi app
+
+Usuario administrados:
+
+# username: admin
+
+# password: admin

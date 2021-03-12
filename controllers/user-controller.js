@@ -3,6 +3,8 @@
 const User = require("./../models/user-model");
 const ShoppingCart = require("./../models/shopping-cart-model");
 const Product = require("./../models/product-model");
+const Invoice = require("./../models/invoice-model");
+const Category = require("./../models/category-model");
 const bcrypt = require("bcrypt-nodejs");
 const jwt = require("../services/jwt");
 const { param } = require("../routes/user-routes");
@@ -253,6 +255,7 @@ function getUsers(req, res) {
 
 /**
  * Funciones para el usuario cliente para el usaurio cliente
+ * la funcion de login del usuario admin es la misma para el cliente
  */
 
 function registerUserClient(req, res) {
@@ -427,32 +430,178 @@ function addToShoppingCart(req, res) {
     }).populate();
 }
 
-function clearShoppingCart(req, res) {
-    let userId = req.params.idU;
-
-    User.findByIdAndUpdate(
-        userId, {
-            shoppingCart: {},
-        }, { new: true },
-        (err, userUpdated) => {
+function getMostSelledProducts(req, res) {
+    Product.find({})
+        .sort({ quantity_sold: "desc" })
+        .limit(3)
+        .exec((err, products) => {
             if (err) {
                 return res.status(500).send({ message: "Error general" });
-            } else if (userUpdated) {
-                return res.send({ message: "carrito vaciado", userUpdated });
+            } else if (products) {
+                return res.send({
+                    message: "Los 3 productos mas vendidos: ",
+                    products,
+                });
             } else {
-                return res.status(404).send({ message: "No existe el usuarios" });
+                return res.status(404).send({ message: "No hay productos" });
             }
-        }
-    );
+        });
 }
+
+function searchProductsByName(req, res) {
+    let params = req.body;
+
+    if (!params.name) {
+        return res.status(403).send({ message: "Ingrese el nombre del producto" });
+    } else {
+        Product.find({ $or: [{ name: params.name }] }, (err, productFound) => {
+            if (err) {
+                return res.status(500).send({ message: "Error general" });
+            } else if (productFound) {
+                return res.send({ message: "Productos encontrados", productFound });
+            } else {
+                return res
+                    .status(404)
+                    .send({ message: "No se encontro producto con ese nombre" });
+            }
+        });
+    }
+}
+
+function updateUserClient(req, res) {
+    let userId = req.params.idU;
+    let update = req.body;
+
+    if (userId != req.user.sub) {
+        return res.status(403).send({ message: "Ingrese el nombre del producto" });
+    } else {
+        User.findByIdAndUpdate(userId, update, { new: true }, (err, userUpdate) => {
+            if (err) {
+                return res.status(500).send({ message: "Error general" });
+            } else if (userUpdate) {
+                return res.send({ message: "User updated", userUpdate });
+            } else {
+                return res.status(500).send({ message: "Error general" });
+            }
+        });
+    }
+}
+
+function deleteAccount(req, res) {
+    let userId = req.params.idU;
+    let params = req.body;
+
+    if (userId != req.user.sub) {
+        return res.status(403).send({ message: "Ingrese el nombre del producto" });
+    } else {
+        if (!params.password) {
+            return res
+                .status(400)
+                .send({ message: "Ingrese la password para validar" });
+        } else {
+            bcrypt.compare(
+                params.password,
+                req.user.password,
+                (err, passwordCheck) => {
+                    if (err) {
+                        return res
+                            .status(500)
+                            .send({ message: "Error general checkeando la password" });
+                    } else if (passwordCheck) {
+                        User.findByIdAndRemove(userId, (err, userRemoved) => {
+                            if (err) {
+                                return res.status(500).send({ message: "Error general" });
+                            } else if (userRemoved) {
+                                return res.send({ message: "Usuario eliminado correctamente" });
+                            } else {
+                                return res.status(404).send({ message: "No existe usuarios" });
+                            }
+                        });
+                    } else {
+                        return res
+                            .status(403)
+                            .send({ message: "La password no es correcta" });
+                    }
+                }
+            );
+        }
+    }
+}
+
+function showDetailInvoice(req, res) {
+    let invoiceId = req.params.idI;
+    let userId = req.user.sub;
+
+    if (!invoiceId) {
+        return res.status(400).send({ message: "ingrese el id de la factura" });
+    } else {
+        Invoice.findOne({ _id: invoiceId, userId: userId }, (err, invoiceFound) => {
+            if (err) {
+                return res.status(500).send({ message: "Error general" });
+            } else if (invoiceFound) {
+                return res.send({ message: "Factura encontrada", invoiceFound });
+            } else {
+                return res.status(404).send({ message: "No existe la factura" });
+            }
+        });
+    }
+}
+
+function searchByCategory(req, res) {
+    let cateogoryId = req.params.idC;
+
+    if (!cateogoryId) {
+        return res.status(400).send({ message: "ingrese el id de la categoria" });
+    } else {
+        Category.findById(cateogoryId, (err, categoryFound) => {
+                if (err) {
+                    return res.status(500).send({ message: "Error general" });
+                } else if (categoryFound) {
+                    return res.send({
+                        message: "Productos por categoria",
+                        products: categoryFound.productsId,
+                    });
+                } else {
+                    return res.status(404).send({ message: "No existe la categoria" });
+                }
+            })
+            .select("productsId")
+            .populate("productsId");
+    }
+}
+
+function showCategories(req, res) {
+    Category.find({}).exec((err, categories) => {
+        if (err) {
+            return res.status(500).send({ message: "Error general" });
+        } else if (categories) {
+            return res.send({
+                message: "categorias",
+                categories,
+            });
+        } else {
+            return res.status(404).send({ message: "No categoria" });
+        }
+    });
+}
+
 module.exports = {
+    // Para el admin
     createUserAdmin,
-    login,
+    login, // para todos los usuarios
     createUser,
     updateUser,
     deleteUser,
     getUsers,
+
+    // Para el usuario
     registerUserClient,
     addToShoppingCart,
-    // clearShoppingCart,
+    getMostSelledProducts,
+    searchProductsByName,
+    updateUserClient,
+    deleteAccount,
+    showDetailInvoice,
+    searchByCategory,
+    showCategories,
 };

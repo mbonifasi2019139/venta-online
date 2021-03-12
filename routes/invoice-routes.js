@@ -7,6 +7,16 @@ const invoiceController = require("./../controllers/invoice-controller");
 const api = express.Router();
 
 // metodos para el administrador
+api.get(
+    "/getAllInvoices", [mdAuth.ensureAuth, mdAuth.ensureAuthAdmin],
+    invoiceController.getAllInvoices
+);
+
+api.post(
+    "/getAllClientInvoices/:idU", [mdAuth.ensureAuth, mdAuth.ensureAuthAdmin],
+    invoiceController.getAllClientInvoices
+);
+
 api.post(
     "/getProductsInvoice/:idI", [mdAuth.ensureAuth, mdAuth.ensureAuthAdmin],
     invoiceController.getProductsInvoice

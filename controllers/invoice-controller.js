@@ -9,6 +9,61 @@ const Invoice = require("./../models/invoice-model");
  * Fuciones de la factura para el administrador
  */
 
+function getAllInvoices(req, res) {
+    User.find()
+        .populate("invoices")
+        .select("invoices")
+        .exec((err, users) => {
+            if (err) {
+                return res.status(500).send({ message: "Error general" });
+            } else if (users) {
+                let usersInvoices = users.filter(
+                    (element) => element.invoices.length > 0
+                );
+                return res.send({
+                    message: "Facturas empleados",
+                    facturas: usersInvoices,
+                });
+            } else {
+                return res.status(404).send({ message: "No existe usuarios" });
+            }
+        });
+}
+
+function getAllClientInvoices(req, res) {
+    let userId = req.params.idU;
+
+    if (!userId) {
+        return res.status(404).send({ message: "Ingrese el ID del usuario" });
+    } else {
+        User.findById(userId)
+            .populate("invoices")
+            .select("invoices")
+            .exec((err, user) => {
+                if (err) {
+                    return res.status(500).send({ message: "Error general" });
+                } else if (user) {
+                    // let usersInvoices = users.filter(
+                    //     (element) => element.invoices.length > 0
+                    // );
+                    if (user.invoices.length > 0) {
+                        return res.send({
+                            message: "Facturas empleado",
+                            facturas: user,
+                        });
+                    } else {
+                        return res.send({
+                            message: "El empleado no tiene factura",
+                            facturas: user,
+                        });
+                    }
+                } else {
+                    return res.status(404).send({ message: "No existe el usuario" });
+                }
+            });
+    }
+}
+
 function getProductsInvoice(req, res) {
     let invoiceId = req.params.idI;
 
@@ -19,14 +74,16 @@ function getProductsInvoice(req, res) {
                 } else if (productsInvoice) {
                     return res.send({
                         message: "Productso de la factura",
-                        productsInvoice,
+                        products: productsInvoice.shoppingCart,
                     });
                 } else {
                     return res.status(404).send({ message: "No existe la factura" });
                 }
             })
-            .select("shoppingCart")
-            .populate("productId");
+            // .select("shoppingCart.productId")
+            .populate("shoppingCart.productId")
+            .select("productId");
+        // .populate("quantity_sold");
     } else {
         return res.status(400).send({ message: "Ingrese el ID de la factura" });
     }
@@ -47,7 +104,7 @@ function getOutOfStockProducts(req, res) {
 function getMostSelledProducts(req, res) {
     Product.find({})
         .sort({ quantity_sold: "desc" })
-        .limit(2)
+        .limit(3)
         .exec((err, products) => {
             if (err) {
                 return res.status(500).send({ message: "Error general" });
@@ -174,4 +231,6 @@ module.exports = {
     getProductsInvoice,
     getOutOfStockProducts,
     getMostSelledProducts,
+    getAllInvoices,
+    getAllClientInvoices,
 };
